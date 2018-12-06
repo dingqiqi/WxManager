@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.tencent.mm.opensdk.modelmsg.SendAuth;
 import com.tencent.mm.opensdk.modelmsg.SendMessageToWX;
@@ -27,26 +28,33 @@ public class WxManager {
     //是否注册
     private boolean mIsRegister;
 
-    private String mAppKey;
+    public static String mAppId;
+
+    public static String mAppSecret;
 
     private Context mContext;
 
     private static WxCallBack mWxCallBack;
 
-    public WxManager(Context context, String appKey) {
+    public WxManager(Context context, String appId, String appSecret) {
         mContext = context.getApplicationContext();
-        mAppKey = appKey;
-        mIWxApi = WXAPIFactory.createWXAPI(context, appKey);
+        mAppId = appId;
+        mAppSecret = appSecret;
+        mIWxApi = WXAPIFactory.createWXAPI(context, appId);
 
-        mIsRegister = mIWxApi.registerApp(appKey);
+        mIsRegister = mIWxApi.registerApp(appId);
     }
 
-    public static void sendResult(Object result) {
-
+    public static void sendSuccess(Object result) {
         if (mWxCallBack != null) {
-            mWxCallBack.onResult(result);
+            mWxCallBack.onSuccess(result);
         }
+    }
 
+    public static void sendFailed(String result) {
+        if (mWxCallBack != null) {
+            mWxCallBack.onFailed(result);
+        }
     }
 
     public boolean isWXAppInstalled() {
@@ -58,9 +66,15 @@ public class WxManager {
      */
     public void wxAuthLogin(WxCallBack wxCallBack) {
         mWxCallBack = wxCallBack;
+
+        if (!isWXAppInstalled()) {
+            Toast.makeText(mContext, "微信客户端未安装!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         //未注册
         if (!mIsRegister) {
-            mIsRegister = mIWxApi.registerApp(mAppKey);
+            mIsRegister = mIWxApi.registerApp(mAppId);
         }
 
         //发起登录请求
@@ -83,9 +97,14 @@ public class WxManager {
                              String description, String filePath, WxCallBack wxCallBack) {
         mWxCallBack = wxCallBack;
 
+        if (!isWXAppInstalled()) {
+            Toast.makeText(mContext, "微信客户端未安装!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         //未注册
         if (!mIsRegister) {
-            mIsRegister = mIWxApi.registerApp(mAppKey);
+            mIsRegister = mIWxApi.registerApp(mAppId);
         }
 
         WXWebpageObject webPage = new WXWebpageObject();
@@ -123,7 +142,7 @@ public class WxManager {
             boolean result = mIWxApi.sendReq(req);
 
             if (!result) {
-                sendResult("分享失败!");
+                sendFailed("分享失败!");
             }
         } else if ("friends".equals(type)) {
             //会话
@@ -131,11 +150,11 @@ public class WxManager {
             boolean result = mIWxApi.sendReq(req);
 
             if (!result) {
-                sendResult("分享失败!");
+                sendFailed("分享失败!");
             }
         } else {
             Log.e("WxManager", "分享类型错误");
-            sendResult("分享类型错误!");
+            sendFailed("分享类型错误!");
         }
 
     }
@@ -156,6 +175,8 @@ public class WxManager {
     }
 
     public interface WxCallBack {
-        void onResult(Object o);
+        void onSuccess(Object object);
+
+        void onFailed(String msg);
     }
 }
